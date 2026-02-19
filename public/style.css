@@ -1,0 +1,743 @@
+/* ============================================
+   Auth App - Netflix-style premium UI
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ---------- Reusable color variables ---------- */
+:root {
+  /* Primary Netflix red */
+  --primary: #E50914;
+  --primary-dark: #b20710;
+  --primary-light: #ff1a27;
+  --primary-glow: rgba(229, 9, 20, 0.5);
+  --primary-glow-soft: rgba(229, 9, 20, 0.25);
+  --primary-neon: rgba(229, 9, 20, 0.7);
+
+  /* Background */
+  --bg-start: #0b0b0f;
+  --bg-end: #1a0003;
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-strong: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-red: rgba(229, 9, 20, 0.2);
+
+  /* Text */
+  --text: #f5f5f5;
+  --text-muted: #a3a3a3;
+
+  /* States */
+  --error: #ef4444;
+  --error-bg: rgba(239, 68, 68, 0.12);
+  --error-border: rgba(239, 68, 68, 0.35);
+  --success: #22c55e;
+  --success-bg: rgba(34, 197, 94, 0.12);
+  --success-border: rgba(34, 197, 94, 0.35);
+
+  /* Layout */
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  --transition: 0.3s ease;
+}
+
+/* ---------- CineVault logo (navbar / clickable branding) ---------- */
+.cinevault-logo {
+  font-size: 28px;
+  font-weight: 800;
+  color: #e50914;
+  text-decoration: none;
+  letter-spacing: 1px;
+  transition: 0.3s ease;
+}
+
+.cinevault-logo:hover {
+  color: #ff2a2a;
+  text-shadow: 0 0 12px rgba(229, 9, 20, 0.7);
+  transform: scale(1.05);
+}
+
+/* Two-tone logo when used inside app-brand (Cine white, Vault red) */
+.app-brand .cinevault-logo {
+  color: var(--text);
+  font-size: 2rem;
+  letter-spacing: 0.04em;
+}
+
+.app-brand .cinevault-logo span {
+  color: var(--primary);
+}
+
+.app-brand .cinevault-logo:hover {
+  color: var(--text);
+  text-shadow: 0 0 12px rgba(229, 9, 20, 0.7);
+  transform: scale(1.05);
+}
+
+.app-brand .cinevault-logo:hover span {
+  color: #ff2a2a;
+}
+
+.landing-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 1.25rem 2rem;
+  z-index: 100;
+}
+
+.landing-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.landing-body a {
+  color: var(--primary-light);
+  text-decoration: none;
+}
+
+.landing-body a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Loading overlay (fast redirect) ---------- */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: auto;
+}
+
+.loading-overlay.loading-overlay-visible {
+  opacity: 1;
+}
+
+.loading-text {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Modern minimal spinner */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: loadingSpin 0.8s linear infinite;
+}
+
+@keyframes loadingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  background: var(--bg-start);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ---------- 1. Animated gradient background ---------- */
+.bg-gradient-animated {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    var(--bg-start) 0%,
+    #0d0d12 25%,
+    #120006 50%,
+    var(--bg-end) 75%,
+    #0b0b0f 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 12s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ---------- 2. Mouse-follow radial glow (position set by JS) ---------- */
+.mouse-glow {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 600px;
+  height: 600px;
+  margin-left: -300px;
+  margin-top: -300px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    var(--primary-glow-soft) 0%,
+    rgba(229, 9, 20, 0.08) 30%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity var(--transition);
+}
+
+/* ---------- 3. Floating particles container ---------- */
+.particles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.particles .particle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--primary);
+  opacity: 0.15;
+  filter: blur(2px);
+  animation: particleFloat 20s ease-in-out infinite;
+}
+
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.1;
+  }
+  25% {
+    transform: translate(20px, -40px) scale(1.1);
+    opacity: 0.18;
+  }
+  50% {
+    transform: translate(-30px, 20px) scale(0.9);
+    opacity: 0.12;
+  }
+  75% {
+    transform: translate(15px, 30px) scale(1.05);
+    opacity: 0.16;
+  }
+}
+
+/* ---------- Main content wrapper ---------- */
+.page-wrapper {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- 7. Logo with subtle pulsing glow ---------- */
+.app-brand {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.app-brand .logo-text {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-shadow:
+    0 0 20px var(--primary-glow-soft),
+    0 0 40px rgba(229, 9, 20, 0.15);
+  animation: logoGlow 3s ease-in-out infinite;
+  transition: text-shadow var(--transition);
+}
+
+.app-brand:hover .logo-text {
+  text-shadow:
+    0 0 24px var(--primary-glow-soft),
+    0 0 48px rgba(229, 9, 20, 0.25);
+}
+
+.app-brand .logo-text span {
+  color: var(--primary);
+  text-shadow:
+    0 0 20px var(--primary-glow),
+    0 0 40px var(--primary-glow-soft);
+  animation: logoGlowRed 3s ease-in-out infinite;
+  transition: text-shadow var(--transition);
+}
+
+.app-brand:hover .logo-text span {
+  text-shadow:
+    0 0 28px var(--primary-glow),
+    0 0 56px var(--primary-glow-soft);
+}
+
+.app-brand .logo-tagline {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+@keyframes logoGlowRed {
+  0%, 100% {
+    text-shadow:
+      0 0 20px var(--primary-glow),
+      0 0 40px var(--primary-glow-soft);
+  }
+  50% {
+    text-shadow:
+      0 0 28px var(--primary-glow),
+      0 0 56px var(--primary-glow-soft);
+  }
+}
+
+@keyframes logoGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 20px var(--primary-glow-soft),
+      0 0 40px rgba(229, 9, 20, 0.15);
+  }
+  50% {
+    text-shadow:
+      0 0 28px var(--primary-glow-soft),
+      0 0 56px rgba(229, 9, 20, 0.22);
+  }
+}
+
+/* ---------- 4. Card entrance + 6. Hover lift + glassmorphism ---------- */
+.auth-card {
+  width: 100%;
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px var(--glass-border-red),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border-radius: 24px;
+  padding: 2.25rem 2rem;
+  opacity: 0;
+  transform: scale(0.96) translateY(10px);
+  animation: cardEnter 0.6s var(--transition) forwards;
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+.auth-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px rgba(229, 9, 20, 0.3),
+    0 0 40px -10px var(--primary-glow-soft);
+}
+
+@keyframes cardEnter {
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.auth-card h1 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.auth-card .subtitle {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
+}
+
+.auth-card .welcome-msg {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--glass-strong);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--primary);
+  transition: border-color var(--transition);
+}
+
+/* ---------- Form groups ---------- */
+.form-group {
+  margin-bottom: 1.35rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrap .input-icon {
+  position: absolute;
+  left: 1rem;
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color var(--transition), transform var(--transition);
+}
+
+.input-wrap input {
+  width: 100%;
+  padding: 0.9rem 1rem 0.9rem 3rem;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.input-wrap input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.input-wrap input:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- 6. Input focus neon red outline ---------- */
+.input-wrap input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-neon);
+}
+
+.input-wrap input:focus + .input-icon,
+.input-wrap:focus-within .input-icon {
+  color: var(--primary);
+}
+
+/* ---------- Password field + show/hide icon animation ---------- */
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap .input-wrap input {
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0.35rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition), background var(--transition), transform var(--transition);
+}
+
+.password-toggle:hover {
+  color: var(--primary);
+  background: rgba(229, 9, 20, 0.1);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.password-toggle:active {
+  transform: translateY(-50%) scale(0.98);
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+  transition: opacity var(--transition), transform var(--transition);
+}
+
+.password-toggle .icon-eye,
+.password-toggle .icon-eye-off {
+  position: absolute;
+}
+
+/* ---------- 5. Button hover glow + smooth transitions ---------- */
+.btn {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
+  position: relative;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  margin-top: 0.5rem;
+  box-shadow: 0 4px 14px -3px var(--primary-glow);
+  overflow: hidden;
+}
+
+/* Button shine sweep - diagonal light on hover */
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 65%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-position: 150% 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.btn-primary:hover:not(:disabled)::before {
+  animation: buttonShine 0.6s ease forwards;
+}
+
+@keyframes buttonShine {
+  to {
+    background-position: -50% 0;
+  }
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -6px var(--primary-glow), 0 0 20px -4px var(--primary-glow-soft);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-primary:disabled::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ---------- Remember me row ---------- */
+.form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.35rem;
+}
+
+.checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+
+.checkbox-wrap:hover {
+  opacity: 0.9;
+}
+
+.checkbox-wrap input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.checkbox-wrap span {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.forgot-link {
+  font-size: 0.875rem;
+  color: var(--primary-light);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--transition), text-decoration var(--transition);
+}
+
+.forgot-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* ---------- Auth link ---------- */
+.auth-link {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.auth-link a {
+  color: var(--primary-light);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color var(--transition), text-decoration var(--transition);
+}
+
+.auth-link a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* ---------- Message boxes ---------- */
+.message {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+  display: none;
+  align-items: flex-start;
+  gap: 0.5rem;
+  line-height: 1.4;
+  transition: opacity var(--transition);
+}
+
+.message.show {
+  display: flex;
+}
+
+.message.error {
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  color: var(--error);
+}
+
+.message.success {
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success);
+}
+
+/* ---------- Footer ---------- */
+.page-footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  transition: color var(--transition);
+}
+
+.page-footer p {
+  margin: 0;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 480px) {
+  body {
+    padding: 1rem 0.75rem;
+  }
+
+  .auth-card {
+    padding: 1.75rem 1.5rem;
+    border-radius: 20px;
+  }
+
+  .auth-card h1 {
+    font-size: 1.5rem;
+  }
+
+  .app-brand .logo-text {
+    font-size: 1.65rem;
+  }
+
+  .input-wrap input {
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mouse-glow {
+    width: 400px;
+    height: 400px;
+    margin-left: -200px;
+    margin-top: -200px;
+  }
+}
+
+@media (min-width: 768px) {
+  .auth-card {
+    padding: 2.5rem 2.25rem;
+  }
+}

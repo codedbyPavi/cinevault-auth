@@ -1,0 +1,56 @@
+/**
+ * intro.css - CineVault intro overlay (simple fade-in + scale, then fade-out).
+ * No redirect. Registration form is underneath.
+ */
+
+#intro-overlay,
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  background: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.6s ease;
+  pointer-events: auto;
+}
+
+#intro-overlay.fade-out,
+.intro-overlay.fade-out {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+/* Intro logo: simple fade-in + slight scale (no glow pulse) */
+#intro-overlay .cinevault-logo,
+.intro-overlay .cinevault-logo {
+  font-family: 'Inter', sans-serif;
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #e50914;
+  margin: 0;
+  opacity: 0;
+  transform: scale(0.9);
+  animation: introLogoReveal 0.6s ease 0.15s forwards;
+}
+
+@keyframes introLogoReveal {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Page content hidden during intro, revealed when complete */
+body.intro-active .page-wrapper {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+body.intro-active.intro-complete .page-wrapper {
+  opacity: 1;
+}
