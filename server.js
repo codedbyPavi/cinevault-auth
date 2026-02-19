@@ -1,21 +1,16 @@
 /**
  * server.js - Main entry point for the Auth App
- *
- * When server starts:
- * 1. Connects to database
- * 2. Creates users table if not exists
- * 3. Serves static frontend and API routes
+ * Vercel: exported app is used as serverless handler. Local: app.listen(port) starts the server.
  */
 
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const path = require('path');
 const bcrypt = require('bcrypt');
 const { pool, initDatabase } = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
 // ============================================
 // MIDDLEWARE
@@ -24,8 +19,15 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static files from 'public' folder (register.html, login.html, style.css, script.js)
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static frontend (register.html, login.html, style.css, script.js, etc.)
+app.use(express.static('public'));
+
+// Ensure DB and users table exist (once per serverless cold start)
+let dbReady = null;
+function ensureDb() {
+  if (!dbReady) dbReady = initDatabase();
+  return dbReady;
+}
 
 // ============================================
 // REGISTRATION
@@ -40,6 +42,7 @@ app.post('/api/register', async (req, res) => {
   }
 
   try {
+    await ensureDb();
     // Hash password so we never store plain text (bcrypt, 10 rounds)
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -76,6 +79,7 @@ app.post('/api/login', async (req, res) => {
   }
 
   try {
+    await ensureDb();
     const [rows] = await pool.execute(
       'SELECT id, user_id, email, password FROM users WHERE user_id = ? OR email = ?',
       [loginId.trim(), loginId.trim()]
@@ -99,20 +103,18 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// ============================================
-// START SERVER (waits for DB before listening)
-// ============================================
-async function start() {
-  try {
-    await initDatabase();
-    app.listen(PORT, () => {
-      console.log('Server running on http://localhost:' + PORT);
+// Start server when run locally (not on Vercel serverless)
+if (process.env.VERCEL !== '1') {
+  ensureDb()
+    .then(() => {
+      app.listen(port, () => {
+        console.log('Server running on port', port);
+      });
+    })
+    .catch((err) => {
+      console.error('Database connection failed. Server not started.', err.message);
+      process.exit(1);
     });
-  } catch (err) {
-    console.error('Database connection failed. Server not started.');
-    console.error('Error:', err.message);
-    process.exit(1);
-  }
 }
 
-start();
+module.exports = app;

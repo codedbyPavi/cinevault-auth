@@ -9,14 +9,12 @@
 const mysql = require('mysql2/promise');
 
 // ============================================
-// AIVEN MYSQL CREDENTIALS
+// AIVEN MYSQL CREDENTIALS (set in Vercel: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT)
 // ============================================
 const DB_HOST = process.env.DB_HOST || 'mysql-451a4f3-cambridge-f76d.b.aivencloud.com';
 const DB_PORT = parseInt(process.env.DB_PORT || '27381', 10);
 const DB_USER = process.env.DB_USER || 'avnadmin';
 const DB_NAME = process.env.DB_NAME || 'defaultdb';
-// Set DB_PASSWORD env var, or paste your Aiven password here (no quotes):
-// IMPORTANT: Never commit real passwords to Git. Use environment variables.
 const PASSWORD_FALLBACK = '';
 const DB_PASSWORD = process.env.DB_PASSWORD || PASSWORD_FALLBACK;
 
