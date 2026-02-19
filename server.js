@@ -30,10 +30,55 @@ app.get('/', (req, res) => {
 
 // Ensure DB and users table exist (once per serverless cold start)
 let dbReady = null;
+let dbInitError = null;
 function ensureDb() {
-  if (!dbReady) dbReady = initDatabase();
+  if (dbInitError) {
+    // If previous init failed, retry
+    dbReady = null;
+    dbInitError = null;
+  }
+  if (!dbReady) {
+    dbReady = initDatabase().catch((err) => {
+      dbInitError = err;
+      console.error('ensureDb failed:', err.message, err.code);
+      throw err;
+    });
+  }
   return dbReady;
 }
+
+// Health check endpoint for debugging
+app.get('/api/health', async (req, res) => {
+  try {
+    await ensureDb();
+    const [rows] = await pool.execute('SELECT 1 as healthy');
+    res.json({ 
+      status: 'ok', 
+      database: 'connected',
+      env: {
+        hasHost: !!process.env.DB_HOST,
+        hasUser: !!process.env.DB_USER,
+        hasPassword: !!process.env.DB_PASSWORD,
+        hasName: !!process.env.DB_NAME,
+        hasPort: !!process.env.DB_PORT,
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      status: 'error', 
+      database: 'disconnected',
+      error: err.message,
+      code: err.code,
+      env: {
+        hasHost: !!process.env.DB_HOST,
+        hasUser: !!process.env.DB_USER,
+        hasPassword: !!process.env.DB_PASSWORD,
+        hasName: !!process.env.DB_NAME,
+        hasPort: !!process.env.DB_PORT,
+      }
+    });
+  }
+});
 
 // ============================================
 // REGISTRATION
