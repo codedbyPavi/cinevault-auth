@@ -6,6 +6,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const path = require('path');
 const bcrypt = require('bcrypt');
 const { pool, initDatabase } = require('./db');
 
@@ -20,7 +21,12 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static frontend (register.html, login.html, style.css, script.js, etc.)
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Root route: serve index.html (which redirects to register.html)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Ensure DB and users table exist (once per serverless cold start)
 let dbReady = null;
