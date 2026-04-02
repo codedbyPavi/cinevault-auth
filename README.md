@@ -1,3 +1,6 @@
+## 🌐 Live Demo
+👉 [Try the App](https://cinevault-auth-kvt4.vercel.app/)
+
 # Auth App – Registration & Login
 
 A beginner-friendly Registration and Login web application built with **Node.js**, **Express**, and **MySQL**. Passwords are hashed with bcrypt; the server creates the `users` table automatically on start.
